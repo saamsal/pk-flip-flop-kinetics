@@ -79,12 +79,13 @@ def format_duration(hours: float) -> str:
     return f"{hours:.2f} h"
 
 
-def make_time_grid(abs_half_h: float, elim_half_1_h: float, elim_half_2_h: float, scenario: str) -> np.ndarray:
-    slowest_half_life = max(abs_half_h, elim_half_1_h, elim_half_2_h)
-    if scenario == "usual":
-        end_h = max(48.0, 16.0 * slowest_half_life)
-    else:
-        end_h = max(14.0 * 24.0, 16.0 * slowest_half_life)
+def make_time_grid(abs_half_h: float, elim_half_1_h: float, elim_half_2_h: float) -> np.ndarray:
+    # For first-order extravascular PK, the apparent terminal half-life is the
+    # longer of the absorption and elimination half-lives. Use the longest
+    # apparent terminal half-life across the two compared profiles so both are
+    # shown over the same clinically interpretable window.
+    longest_apparent_half_life_h = max(abs_half_h, elim_half_1_h, elim_half_2_h)
+    end_h = 5.0 * longest_apparent_half_life_h
     return np.linspace(0.0, end_h, 1600)
 
 
@@ -133,7 +134,26 @@ def make_concentration_plot(
         height=430,
     )
     if log_y:
-        fig.update_yaxes(type="log")
+        # Keep the lower limit just below the lowest concentration at the end
+        # of the plotted interval. This avoids an unnecessarily deep log scale
+        # and makes differences in terminal slope easier to see.
+        final_concentrations = [
+            float(concentration[-1])
+            for _, concentration, _ in profiles
+            if np.isfinite(concentration[-1]) and concentration[-1] > 0
+        ]
+        positive_values = np.concatenate(
+            [concentration[np.isfinite(concentration) & (concentration > 0)] for _, concentration, _ in profiles]
+        )
+        if final_concentrations and positive_values.size:
+            lower_limit = max(0.8 * min(final_concentrations), np.finfo(float).tiny)
+            upper_limit = 1.15 * float(np.max(positive_values))
+            fig.update_yaxes(
+                type="log",
+                range=[math.log10(lower_limit), math.log10(upper_limit)],
+            )
+        else:
+            fig.update_yaxes(type="log")
     return fig
 
 
@@ -226,7 +246,6 @@ def scenario_panel(
         absorption_half_life_h,
         elimination_half_life_a_h,
         elimination_half_life_b_h,
-        scenario_key,
     )
 
     label_a = f"Setting A: t1/2,elim {elimination_half_life_a_h:g} h (kel {kel_a_h:.4f} h^-1)"
