@@ -82,9 +82,9 @@ def format_duration(hours: float) -> str:
 def make_time_grid(abs_half_h: float, elim_half_1_h: float, elim_half_2_h: float, scenario: str) -> np.ndarray:
     slowest_half_life = max(abs_half_h, elim_half_1_h, elim_half_2_h)
     if scenario == "usual":
-        end_h = max(24.0, 8.0 * slowest_half_life)
+        end_h = max(48.0, 16.0 * slowest_half_life)
     else:
-        end_h = max(7.0 * 24.0, 8.0 * slowest_half_life)
+        end_h = max(14.0 * 24.0, 16.0 * slowest_half_life)
     return np.linspace(0.0, end_h, 1600)
 
 
@@ -338,7 +338,7 @@ with st.sidebar:
         "Native/baseline elimination half-life (h)", min_value=0.5, max_value=48.0, value=0.5, step=0.5
     )
     elimination_half_life_b_h = st.slider(
-        "Comparison elimination half-life (h)", min_value=0.5, max_value=48.0, value=18.0, step=0.5
+        "Comparison elimination half-life (h)", min_value=0.5, max_value=48.0, value=1.0, step=0.5
     )
     st.caption(
         f"Setting A kel = {LN2 / elimination_half_life_a_h:.4f} h^-1\n\n"
